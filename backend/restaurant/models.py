@@ -1,14 +1,24 @@
 from django.db import models
+from django.contrib.auth.hashers import make_password, check_password
+from django.utils.crypto import get_random_string
 
 class Restaurant(models.Model):
-    name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
-    password = models.CharField(max_length=128)
+    name = models.CharField(max_length=100)
+    password = models.CharField(max_length=256)  # Store hashed password
     location = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
     profile_picture = models.ImageField(upload_to='restaurant_pictures/', null=True, blank=True)
     contact_info = models.CharField(max_length=50)
     timings = models.CharField(max_length=100)
+
+    def set_password(self, raw_password):
+        """ Hashes the password and stores it using Django's make_password """
+        self.password = make_password(raw_password)
+
+    def verify_password(self, raw_password):
+        """ Verifies the password using Django's check_password """
+        return check_password(raw_password, self.password)
 
     def __str__(self):
         return self.name

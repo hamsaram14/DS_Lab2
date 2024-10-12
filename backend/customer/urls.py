@@ -11,6 +11,7 @@ urlpatterns = [
     path('<int:pk>/delete/', views.delete_customer, name='delete_customer'),
     path('favorite/add/', add_favorite, name='add_favorite'),
     path('favorite/remove/', remove_favorite, name='remove_favorite'),
-    path('favorites/list/', views.list_favorites, name='list_favorites'),
+    path('favorites/list/', list_favorites, name='list_favorites'),
     path('logout/', customer_logout, name='customer_logout'),
+    path('profile/', views.get_own_profile, name='get_own_profile'),
 ]

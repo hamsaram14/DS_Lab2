@@ -10,10 +10,14 @@ from .serializers import FavoriteSerializer
 from restaurant.models import Restaurant, Dish
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.permissions import AllowAny,IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny]) 
 def customer_signup(request):
     data = request.data
     # print(f"Request Data: {data}")
@@ -127,8 +131,28 @@ def customer_logout(request):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def add_favorite(request):
-    customer = request.user
+    # Manually authenticating and printing user details for debugging
+    jwt_authenticator = JWTAuthentication()
+    try:
+        user_auth_tuple = jwt_authenticator.authenticate(request)
+        if user_auth_tuple is not None:
+            user, _ = user_auth_tuple
+            print(f"Authenticated User: {user}, Is Authenticated: {user.is_authenticated}")
+        else:
+            print("Authentication failed")
+    except Exception as e:
+        print(f"Exception during manual authentication: {e}")
+        return Response({'error': 'Token verification failed.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    # Fetch the Customer instance associated with the authenticated user
+    try:
+        customer = Customer.objects.get(user=request.user)
+    except Customer.DoesNotExist:
+        return Response({'error': 'Customer not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    # The rest of your add_favorite implementation here...
     restaurant_id = request.data.get('restaurant_id')
     dish_id = request.data.get('dish_id')
 
@@ -136,20 +160,34 @@ def add_favorite(request):
         return Response({'error': 'No restaurant or dish selected'}, status=status.HTTP_400_BAD_REQUEST)
 
     if restaurant_id:
-        restaurant = Restaurant.objects.get(id=restaurant_id)
-        favorite, created = Favorite.objects.get_or_create(customer=customer, restaurant=restaurant)
+        try:
+            restaurant = Restaurant.objects.get(id=restaurant_id)
+            favorite, created = Favorite.objects.get_or_create(customer=customer, restaurant=restaurant)
+        except Restaurant.DoesNotExist:
+            return Response({'error': 'Invalid restaurant ID'}, status=status.HTTP_400_BAD_REQUEST)
     elif dish_id:
-        dish = Dish.objects.get(id=dish_id)
-        favorite, created = Favorite.objects.get_or_create(customer=customer, dish=dish)
+        try:
+            dish = Dish.objects.get(id=dish_id)
+            favorite, created = Favorite.objects.get_or_create(customer=customer, dish=dish)
+        except Dish.DoesNotExist:
+            return Response({'error': 'Invalid dish ID'}, status=status.HTTP_400_BAD_REQUEST)
 
     if created:
         return Response({'success': 'Favorite added'}, status=status.HTTP_201_CREATED)
     else:
         return Response({'info': 'Already in favorites'}, status=status.HTTP_200_OK)
 
+
+
+
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def remove_favorite(request):
-    customer = request.user
+    try:
+        customer = Customer.objects.get(user=request.user)  # Ensure it's a Customer instance
+    except Customer.DoesNotExist:
+        return Response({'error': 'Customer not found'}, status=status.HTTP_404_NOT_FOUND)
+
     restaurant_id = request.data.get('restaurant_id')
     dish_id = request.data.get('dish_id')
 
@@ -160,9 +198,27 @@ def remove_favorite(request):
 
     return Response({'success': 'Favorite removed'}, status=status.HTTP_200_OK)
 
+
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def list_favorites(request):
-    customer = request.user
+    try:
+        # Assuming Customer is related to User with a OneToOneField named 'user'
+        customer = Customer.objects.get(user=request.user)
+    except Customer.DoesNotExist:
+        return Response({'error': 'Customer not found'}, status=status.HTTP_404_NOT_FOUND)
+    
     favorites = Favorite.objects.filter(customer=customer)
     serializer = FavoriteSerializer(favorites, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_own_profile(request):
+    try:
+        customer = Customer.objects.get(user=request.user)
+    except Customer.DoesNotExist:
+        return Response({'error': 'Customer not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = CustomerSerializer(customer)
     return Response(serializer.data, status=status.HTTP_200_OK)

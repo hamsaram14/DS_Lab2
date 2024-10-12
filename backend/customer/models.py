@@ -6,8 +6,6 @@ from restaurant.models import Restaurant, Dish
 from django.utils import timezone
 
 
-
-
 class Customer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     email = models.EmailField(unique=True)
