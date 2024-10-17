@@ -1,3 +1,4 @@
+# Models for Order and OrderItem
 from django.db import models
 from customer.models import Customer
 from restaurant.models import Dish, Restaurant

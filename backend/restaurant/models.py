@@ -1,8 +1,10 @@
 from django.db import models
 from django.contrib.auth.hashers import make_password, check_password
 from django.utils.crypto import get_random_string
+from django.contrib.auth.models import User
 
 class Restaurant(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=100)
     password = models.CharField(max_length=256)  # Store hashed password

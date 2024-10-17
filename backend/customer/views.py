@@ -40,6 +40,7 @@ def customer_signup(request):
 
 # 2. Customer Login (Password Check)
 @api_view(['POST'])
+@permission_classes([AllowAny]) 
 def customer_login(request):
     data = request.data
     email = data.get('email')
@@ -65,19 +66,7 @@ def customer_login(request):
     else:
         return Response({'error': 'Invalid email or password'}, status=status.HTTP_400_BAD_REQUEST)
 
-
-# 3. Create a Customer Profile
-@api_view(['POST'])
-def create_customer(request):
-    data = request.data
-    data['password'] = make_password(data['password'])  # Hash the password
-    serializer = CustomerSerializer(data=data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-# 4. Get a specific Customer Profile
+# 3. Get a specific Customer Profile
 @api_view(['GET'])
 def get_customer(request, pk):
     try:
@@ -88,29 +77,31 @@ def get_customer(request, pk):
     serializer = CustomerSerializer(customer)
     return Response(serializer.data)
 
-# 5. Update a Customer Profile (Update Password with Hashing)
+# 4. Update a Customer Profile (Update Password with Hashing)
 @api_view(['PUT'])
 def update_customer(request, pk):
     try:
         customer = Customer.objects.get(pk=pk)
     except Customer.DoesNotExist:
         return Response({'error': 'Customer not found'}, status=status.HTTP_404_NOT_FOUND)
-    
+
     data = request.data
-    if 'password' in data:  # If the password is being updated, hash it
+
+    # If the password is being updated, hash it
+    if 'password' in data:
         data['password'] = make_password(data['password'])
-    
-    serializer = CustomerSerializer(customer, data=data)
+
+    # Perform partial update
+    serializer = CustomerSerializer(customer, data=data, partial=True)
+
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
     else:
-        print(serializer.errors) 
-        print(f"Request Data: {request.data}")
-        print(f"Validated Data: {serializer.validated_data}")  
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# 6. Delete a Customer Profile
+
+# 5. Delete a Customer Profile
 @api_view(['DELETE'])
 def delete_customer(request, pk):
     try:
