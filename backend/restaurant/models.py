@@ -11,8 +11,8 @@ class Restaurant(models.Model):
     location = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
     profile_picture = models.ImageField(upload_to='restaurant_pictures/', null=True, blank=True)
-    contact_info = models.CharField(max_length=50)
-    timings = models.CharField(max_length=100)
+    contact_info = models.CharField(max_length=100, null=True, blank=True)
+    timings = models.CharField(max_length=100, null=True, blank=True)
 
     def set_password(self, raw_password):
         """ Hashes the password and stores it using Django's make_password """

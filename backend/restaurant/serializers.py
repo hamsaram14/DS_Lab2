@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Restaurant, Dish
+from order.models import Order
 from django.contrib.auth.hashers import make_password
 
 class RestaurantSerializer(serializers.ModelSerializer):
@@ -26,3 +27,5 @@ class DishSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dish
         fields = ['id', 'restaurant', 'name', 'description', 'price', 'category', 'image']
+
+

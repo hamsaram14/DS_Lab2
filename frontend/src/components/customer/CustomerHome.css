@@ -1,0 +1,36 @@
+/* CustomerHome.css */
+
+.customer-home-container {
+  background: #f8f9fa;
+  padding: 20px;
+}
+
+.main-content {
+  margin-top: 20px;
+}
+
+.filters {
+  position: sticky;
+  top: 20px;
+}
+
+.location-input {
+  margin-bottom: 20px;
+}
+
+.filter-section {
+  background: #fff;
+  padding: 15px;
+  border-radius: 8px;
+}
+
+.restaurant-list {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .filters {
+    margin-bottom: 20px;
+  }
+}

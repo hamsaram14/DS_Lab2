@@ -5,26 +5,32 @@ from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
 
 class CustomerSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(source='user.email', required=True)
+    # email = serializers.EmailField(source='user.email', required=True)
     first_name = serializers.CharField(source='user.first_name', required=True)
     last_name = serializers.CharField(source='user.last_name', required=True)
     password = serializers.CharField(write_only=True, required=True)
+    country = serializers.CharField(required=False, allow_blank=True, max_length=100)
 
     class Meta:
         model = Customer
-        fields = ['id', 'email', 'first_name', 'last_name', 'password_hash', 'password', 'phone_number', 'avatar', 'created_at', 'updated_at']
+        fields = ['id', 'first_name', 'last_name', 'password_hash', 'password', 'phone_number', 'avatar', 'created_at', 'updated_at', 'country']
 
     def create(self, validated_data):
-        # Extract user-related fields
+    # Extract user-related fields
         user_data = validated_data.pop('user')
         email = user_data['email']
+
+        # Validate email uniqueness
+        if User.objects.filter(email=email).exists():
+            raise serializers.ValidationError({"email": "A user with this email already exists."})
+
         first_name = user_data['first_name']
         last_name = user_data['last_name']
         password = validated_data.pop('password')
 
         # Create the User object and hash the password
         user = User.objects.create(
-            username=email,  # Using email as username, adjust if needed
+            username=email,  # Using email as username
             email=email,
             first_name=first_name,
             last_name=last_name,
@@ -35,6 +41,7 @@ class CustomerSerializer(serializers.ModelSerializer):
         # Create the Customer object linked to the User object
         customer = Customer.objects.create(user=user, **validated_data)
         return customer
+
 
     def update(self, instance, validated_data):
         print(f"Validated Data: {validated_data}")
@@ -49,6 +56,8 @@ class CustomerSerializer(serializers.ModelSerializer):
 
         # Update Customer-specific fields
         instance.phone_number = validated_data.get('phone_number', instance.phone_number)
+        instance.latitude = validated_data.get('latitude', instance.latitude)
+        instance.longitude = validated_data.get('longitude', instance.longitude)
         if 'password' in validated_data:
             instance.password_hash = make_password(validated_data['password'])
         instance.save()

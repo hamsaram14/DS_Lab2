@@ -13,29 +13,48 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.authentication import JWTAuthentication
-
+from django.db import IntegrityError
+from restaurant.serializers import RestaurantSerializer  # Assuming you have a RestaurantSerializer in your restaurant app
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny]) 
+@permission_classes([AllowAny])
 def customer_signup(request):
-    data = request.data
-    # print(f"Request Data: {data}")
-    # Check if the necessary fields are in the request data
-    if not all(key in data for key in ('email', 'first_name', 'last_name', 'password')):
+    data = request.data.copy()  # Make a copy to avoid modifying the original data
+
+    # Validate required fields
+    required_fields = ['email', 'first_name', 'last_name', 'password']
+    if not all(key in data for key in required_fields):
         return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
-    # Hash the password and assign it to the 'password_hash' field in the data dictionary
-    hashed_password = make_password(data['password'])
-    data['password_hash'] = hashed_password  # Store hashed password in 'password_hash'
-    serializer = CustomerSerializer(data=data)
-    
-    if serializer.is_valid():
-        customer = serializer.save()
-        # print(f"Serializer Data: {serializer.data}")  
-        # print(f"Hashed Password: {customer.password_hash}")  
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # Check if a user with the given email already exists
+    if User.objects.filter(email=data['email']).exists():
+        return Response({"error": "A user with this email already exists."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Create the user
+    user = User.objects.create_user(
+        username=data['email'],
+        email=data['email'],
+        first_name=data['first_name'],
+        last_name=data['last_name'],
+        password=data['password']
+    )
+
+    # Remove fields that are not in the Customer model
+    data.pop('password')
+    data.pop('email')
+    data.pop('first_name')
+    data.pop('last_name')
+
+    # Create the customer
+    customer = Customer.objects.create(user=user, **data)
+
+    # Serialize the customer data
+    serializer = CustomerSerializer(customer)
+
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
 
 
 # 2. Customer Login (Password Check)
@@ -212,4 +231,15 @@ def get_own_profile(request):
         return Response({'error': 'Customer not found'}, status=status.HTTP_404_NOT_FOUND)
 
     serializer = CustomerSerializer(customer)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def list_restaurants(request):
+    """
+    Retrieves a list of all available restaurants.
+    """
+    restaurants = Restaurant.objects.all()
+    serializer = RestaurantSerializer(restaurants, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)

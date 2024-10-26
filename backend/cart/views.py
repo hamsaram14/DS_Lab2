@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import Cart, CartItem
+from customer.models import Customer
 from .serializers import CartSerializer, CartItemSerializer
 from restaurant.models import Dish
 
@@ -39,21 +40,40 @@ def add_to_cart(request):
 @permission_classes([IsAuthenticated])
 def get_cart_items(request):
     try:
-        customer = request.user.customer
-        cart = Cart.objects.get(customer=customer)
+        username = request.user.username
+        email = request.user.email
+        user_id = request.user.id
+        customer = Customer.objects.filter(user=user_id).first()
+        if not customer:
+            return Response({"items": []}, status=status.HTTP_200_OK)
+        # return Response([], status=status.HTTP_200_OK)
+
+        cart = Cart.objects.get(customer=customer.id)
         serializer = CartSerializer(cart)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        cart_items = []
+        for item in serializer.data["items"]:
+            dish = Dish.objects.filter(id=item["dish"]).first()
+            item_details = {
+                "id": item["id"],
+                "quantity": item["quantity"],
+                "dish_name": dish.name,
+                "total_price": dish.price * item["quantity"],
+                "price": dish.price,
+                "dish_id": dish.id
+            }
+            cart_items.append(item_details)
+        return Response(cart_items, status=status.HTTP_200_OK)
     except Cart.DoesNotExist:
         return Response({'error': 'Cart not found'}, status=status.HTTP_404_NOT_FOUND)
 
 # 3. Update Cart Item
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
-def update_cart_item(request, dish_id):
+def update_cart_item(request, item_id):
     try:
         customer = request.user.customer
         cart = Cart.objects.get(customer=customer)
-        cart_item = CartItem.objects.get(cart=cart, dish_id=dish_id)
+        cart_item = CartItem.objects.get(cart=cart, id=item_id)
         quantity = request.data.get('quantity')
 
         if quantity is None or int(quantity) <= 0:
@@ -70,11 +90,11 @@ def update_cart_item(request, dish_id):
 # 4. Remove Cart Item
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
-def remove_cart_item(request, dish_id):
+def remove_cart_item(request, item_id):
     try:
         customer = request.user.customer
         cart = Cart.objects.get(customer=customer)
-        cart_item = CartItem.objects.get(cart=cart, dish_id=dish_id)
+        cart_item = CartItem.objects.get(cart=cart.id, id=item_id)
         cart_item.delete()
         return Response({'success': 'Cart item removed'}, status=status.HTTP_200_OK)
     except Cart.DoesNotExist:
