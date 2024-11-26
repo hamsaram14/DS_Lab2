@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ubereats-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ubereats-frontend
+  template:
+    metadata:
+      labels:
+        app: ubereats-frontend
+    spec:
+      containers:
+      - name: ubereats-frontend
+        image: hamsaram/ubereats-frontend:v1
+        ports:
+        - containerPort: 3000
